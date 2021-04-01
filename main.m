@@ -5,12 +5,12 @@
 %% Date: 29-03-2021
 
 clear all; close all; clc;
-v = VideoReader('MAH01462.MP4')
+v = VideoReader('images/MAH01462.MP4');
 
 %% Camera calibration by checkerboard calibration images
 %Load calibration images from zip file
-cal_images=imageSet('C:\Users\Roxan\Desktop\IPCV_Project\calibration_images');
+cal_images=imageSet('./images/calibration images');
 
-[cameraParams]=CameraCalibration(cal_images)
+[cameraParams] = CameraCalibration(cal_images);
    
    
