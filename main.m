@@ -5,12 +5,19 @@
 %% Date: 29-03-2021
 
 clear all; close all; clc;
-v = VideoReader('images/MAH01462.MP4');
+videoReader = VideoReader('images/MAH01462.MP4');
 
 %% Camera calibration by checkerboard calibration images
 %Load calibration images from zip file
 cal_images=imageSet('./images/calibration images');
 
 [cameraParams] = CameraCalibration(cal_images);
-   
+% videoPlayer = vision.VideoPlayer('Position',[100,100,680,520]);
+
+tracked = ImageTracker(videoReader)
+
+
+
+
+
    
