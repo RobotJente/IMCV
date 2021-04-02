@@ -15,7 +15,7 @@ function [trackedVideo] = ImageTracker(videoReader)
     title('Red box shows object region');
 
     % Find interest points using Shi-Tomasi corner detection
-    points = detectMinEigenFeatures(im2gray(objectFrame),'ROI',objectRegion);
+    points = detectMinEigenFeatures(rgb2gray(objectFrame),'ROI',objectRegion);
 
     % Visual representation of interest points
     pointImage = insertMarker(objectFrame,points.Location,'+','Color','white');
