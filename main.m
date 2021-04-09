@@ -14,8 +14,9 @@ cal_images=imageSet('./images/calibration images');
 [cameraParams] = CameraCalibration(cal_images);
 % videoPlayer = vision.VideoPlayer('Position',[100,100,680,520]);
 
-tracked = ImageTracker(videoReader)
+% tracked = ImageTracker(videoReader)
 
+stabilized = stabilize_video(videoReader);
 
 
 
