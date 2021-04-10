@@ -1,7 +1,7 @@
 function [stabilized] = track_template(videoReader) % Input video file which needs to be stabilized.
     % instantiate video reader, player, and template matcher
     vid_player = vision.VideoPlayer('Name', 'Video Tracking');
-    matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true);
+    matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true, 'Metric', 'Sum of squared differences');
     %matcher = vision.TemplateMatcher('ROIInputPort', false, 'BestMatchNeighborhoodOutputPort', true);
 
     videoFWriter = vision.VideoFileWriter('images/track_1.avi', 'FrameRate',videoReader.FrameRate);
@@ -17,8 +17,8 @@ function [stabilized] = track_template(videoReader) % Input video file which nee
 
     
     % initialize pos, utility struct for template matching
-    pos.template_orig = [rectout(1) rectout(2)]; % [x y] upper left corner
-    pos.template_size = [30 30];   % [width height]
+    pos.template_orig = [650 527]; % [x y] upper left corner
+    pos.template_size = [10 10];   % [width height]
     pos.search_border = [15 10];   % max horizontal and vertical displacement
     pos.template_center = floor((pos.template_size-1)/2);
     pos.template_center_pos = (pos.template_orig + pos.template_center - 1);
@@ -46,11 +46,22 @@ function [stabilized] = track_template(videoReader) % Input video file which nee
 
           ROI = [SearchRegion, pos.template_size+2*pos.search_border];
           %Idx = matcher(input,Target);
-          Idx = matcher(input,Target,ROI);
+          [Idx, metrics] = matcher(input,Target,ROI);
+          ychange = abs(Idx(2) - IdxPrev(2));
+          xchange = abs(Idx(2) - IdxPrev(2))
 
+          if metrics(2,2) > 0.2 || ychange > 1 || xchange > 1
+              Idx = int32([IdxPrev(1)+0.8, IdxPrev(2)]);
+          end
+          
+          if norm(double(Idx) - double(IdxPrev)) < 5
+              norm(double(Idx) - double(IdxPrev))
+          end
+          
+          metrics(2,2)
           MotionVector = double(Idx-IdxPrev);
         end
-
+        
         [Offset, SearchRegion] = updatesearch(sz, MotionVector, ...
             SearchRegion, Offset, pos);
 
