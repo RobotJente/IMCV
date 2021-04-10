@@ -1,16 +1,21 @@
-% vid parameter must be a VideoReader object. Stabilizes the image based on
-% translation of manually selected area between frames, by template tracking
-
-function [stabilized] = stabilize_video(videoReader) % Input video file which needs to be stabilized.
+function [stabilized] = track_template(videoReader) % Input video file which needs to be stabilized.
     % instantiate video reader, player, and template matcher
-    vid_player = vision.VideoPlayer('Name', 'Video Stabilization');
+    vid_player = vision.VideoPlayer('Name', 'Video Tracking');
     matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true);
-    videoFWriter = vision.VideoFileWriter('images/stab_1.avi', 'FrameRate',videoReader.FrameRate);
+    %matcher = vision.TemplateMatcher('ROIInputPort', false, 'BestMatchNeighborhoodOutputPort', true);
+
+    videoFWriter = vision.VideoFileWriter('images/track_1.avi', 'FrameRate',videoReader.FrameRate);
 
     % read first frame and use it to select the template to be matched
-    im = readFrame(videoReader);
-    [sub_im, rectout] = imcrop(im);
+%     im = readFrame(videoReader);
+%     [sub_im, rectout] = imcrop(im);
+%     [sub_im] = imcrop(sub_im);
+    s = load('template_data');
+    sub_im = s.data{1,1};
+    rectout = s.data{1,2};
 
+
+    
     % initialize pos, utility struct for template matching
     pos.template_orig = [rectout(1) rectout(2)]; % [x y] upper left corner
     pos.template_size = [30 30];   % [width height]
@@ -21,14 +26,11 @@ function [stabilized] = stabilize_video(videoReader) % Input video file which ne
     W = videoReader.Width; % Width in pixels
     H = videoReader.Height; % Height in pixels
     sz = [W, H];
-    BorderCols = [1:pos.search_border(1)+4 W-pos.search_border(1)+4:W];
-    BorderRows = [1:pos.search_border(2)+4 H-pos.search_border(2)+4:H];
-    
+  
     SearchRegion = pos.template_orig - pos.search_border - 1;
     Offset = [0 0];
     Target = rgb2gray(im2double(sub_im));
     firstTime = true;
-
 
 
     while hasFrame(videoReader)
@@ -43,6 +45,7 @@ function [stabilized] = stabilize_video(videoReader) % Input video file which ne
           IdxPrev = Idx;
 
           ROI = [SearchRegion, pos.template_size+2*pos.search_border];
+          %Idx = matcher(input,Target);
           Idx = matcher(input,Target,ROI);
 
           MotionVector = double(Idx-IdxPrev);
@@ -51,12 +54,6 @@ function [stabilized] = stabilize_video(videoReader) % Input video file which ne
         [Offset, SearchRegion] = updatesearch(sz, MotionVector, ...
             SearchRegion, Offset, pos);
 
-        % Translate video frame to offset the camera motion
-        stabilized = imtranslate(input, Offset, 'linear');
-
-        % Add black border for display
-        stabilized(:, BorderCols) = 0;
-        stabilized(BorderRows, :) = 0;
 
         TargetRect = [pos.template_orig-Offset, pos.template_size];
         SearchRegionRect = [SearchRegion, pos.template_size + 2*pos.search_border];
@@ -69,9 +66,11 @@ function [stabilized] = stabilize_video(videoReader) % Input video file which ne
         input = insertText(input(:,:,1),[191 215],txt,'FontSize',16, ...
                         'TextColor', 'white', 'BoxOpacity', 0);
         % Display video
-        vid_player([input(:,:,1) stabilized]);
+        vid_player([input(:,:,1)]);
         % save frame
-        step(videoFWriter, stabilized); % saves video
+        step(videoFWriter, input); % saves video
+        stabilized = input;
+        
 
     end
     release(videoFWriter); % close the videoWriter
@@ -102,4 +101,3 @@ function [Offset, SearchRegion] = updatesearch(sz, MotionVector, SearchRegion, O
   SearchRegion = SearchRegion + Mv_out;
 
 end % function updatesearch
-

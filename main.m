@@ -4,21 +4,34 @@
 %% Authors: Dionne Ariens, Jesse van Werven, Roxane Munsterman
 %% Date: 29-03-2021
 
-clear all; close all; clc;
+clear; close all; clc;
 videoReader = VideoReader('images/MAH01462.MP4');
 
 %% Camera calibration by checkerboard calibration images
 %Load calibration images from zip file
-cal_images=imageSet('./images/calibration images');
+% cal_images=imageSet('./images/calibration images');
+% 
+% [cameraParams] = CameraCalibration(cal_images);
+% % videoPlayer = vision.VideoPlayer('Position',[100,100,680,520]);
+% 
+% % tracked = ImageTracker(videoReader)
+% 
+% stabilized = stabilize_video(videoReader);
+% v = VideoWriter("images/stabilized_vid_1");
+% open(v)
+% 
+% writeVideo(v,stabilized);
+% close(v)
+% 
+%    
 
-[cameraParams] = CameraCalibration(cal_images);
-% videoPlayer = vision.VideoPlayer('Position',[100,100,680,520]);
+%% Tracking
+% videoReader = VideoReader('images/stab_1.avi');
+% v = ImageTracker(videoReader);
+% 
+% originalVid = VideoReader('images/stab_1.avi');
+% release(originalVid)
 
-% tracked = ImageTracker(videoReader)
+videoReader = VideoReader('images/stab_1.avi');
+v = track_template(videoReader)
 
-stabilized = stabilize_video(videoReader);
-
-
-
-
-   
