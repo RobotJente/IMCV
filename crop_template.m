@@ -18,4 +18,4 @@ imshow(im)
 [sub_im, rectout] = imcrop(im);
 [sub_im] = imcrop(sub_im);
 data = {sub_im, rectout}
-save template_data data
+save template_data_background data

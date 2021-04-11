@@ -35,7 +35,7 @@ function [stabilized] = track_template(videoReader) % Input video file which nee
 
     while hasFrame(videoReader)
         input = rgb2gray(im2double(readFrame(videoReader)));
-
+        pos.template_orig
         % Find location of Target in the input video frame
         if firstTime
           Idx = int32(pos.template_center_pos);
@@ -47,11 +47,18 @@ function [stabilized] = track_template(videoReader) % Input video file which nee
           ROI = [SearchRegion, pos.template_size+2*pos.search_border];
           %Idx = matcher(input,Target);
           [Idx, metrics] = matcher(input,Target,ROI);
-          ychange = abs(Idx(2) - IdxPrev(2));
+          ychange = abs(Idx(1) - IdxPrev(1));
           xchange = abs(Idx(2) - IdxPrev(2))
-
+          motion_model = [0, 0.8];
+         
           if metrics(2,2) > 0.2 || ychange > 1 || xchange > 1
-              Idx = int32([IdxPrev(1)+0.8, IdxPrev(2)]);
+              Idx = int32([IdxPrev(1)+motion_model(1), IdxPrev(2) + motion_model(2)]);
+              detected = false;
+              txt = sprintf('There was no match');
+          else 
+              detected = true;
+              txt = sprintf('There was a match');
+
           end
           
           if norm(double(Idx) - double(IdxPrev)) < 5
@@ -74,8 +81,13 @@ function [stabilized] = track_template(videoReader) % Input video file which nee
                             'Color', 'white');
         % Display the offset (displacement) values on the input image
         txt = sprintf('(%+05.1f,%+05.1f)', Offset);
+    
+        % Draw rectangles on input to show target and search region
+        input = insertShape(input, 'Rectangle', [TargetRect; SearchRegionRect],...
+                            'Color', c);
+        % Display the offset (displacement) values on the input image
         input = insertText(input(:,:,1),[191 215],txt,'FontSize',16, ...
-                        'TextColor', 'white', 'BoxOpacity', 0);
+                        'TextColor', c, 'BoxOpacity', 0);            
         % Display video
         vid_player([input(:,:,1)]);
         % save frame
