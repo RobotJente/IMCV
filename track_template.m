@@ -1,99 +1,117 @@
-function [stabilized] = track_template(videoReader) % Input video file which needs to be stabilized.
+% TRACK_TEMPLATE tracks a template in a video sequence, estimating
+% distances based on camera parameters. Writes tracked video to file 
+%
+% [distance] = TRACK_TEMPLATE(videoReader, template, motionModel, principalPoint, focalLength);
+%
+% @param videoReader: video reader object containing video to be inspected
+% for template
+% 
+% @param template: image template to be matched in video frames
+%
+% @param motionModel: initial estimate of the motion of the tracked object\
+%
+% @param principalPoint: camera parameter used to estimate distance to
+% template, obtained from camera calibration
+%
+% @param focalLength: camera parameter used to estimate distance to
+% template, obtained from camera calibration
+%
+% @returns distances: list, contains distances between camera and matched
+% template at each frame
+% 
+% code adapted from and inspired by https://nl.mathworks.com/help/vision/ref/vision.templatematcher-system-object.html
+
+function [distances] = track_template(videoReader, filePath, template, motionModel, principalPoint, focalLength, pos) % Input video file which needs to be stabilized.
+
     % instantiate video reader, player, and template matcher
-    vid_player = vision.VideoPlayer('Name', 'Video Tracking');
+    vidPlayer = vision.VideoPlayer('Name', 'Video Tracking');
     matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true, 'Metric', 'Sum of squared differences');
-    %matcher = vision.TemplateMatcher('ROIInputPort', false, 'BestMatchNeighborhoodOutputPort', true);
-
-    videoFWriter = vision.VideoFileWriter('images/track_1.avi', 'FrameRate',videoReader.FrameRate);
-
-    % read first frame and use it to select the template to be matched
-%     im = readFrame(videoReader);
-%     [sub_im, rectout] = imcrop(im);
-%     [sub_im] = imcrop(sub_im);
-    s = load('template_data');
-    sub_im = s.data{1,1};
-    rectout = s.data{1,2};
-
-
     
-    % initialize pos, utility struct for template matching
-    pos.template_orig = [650 527]; % [x y] upper left corner
-    pos.template_size = [10 10];   % [width height]
-    pos.search_border = [15 10];   % max horizontal and vertical displacement
-    pos.template_center = floor((pos.template_size-1)/2);
-    pos.template_center_pos = (pos.template_orig + pos.template_center - 1);
-    
+    % Write video to file
+    %videoFWriter = vision.VideoFileWriter(filePath, 'FrameRate',videoReader.FrameRate);
+    videoFWriter = vision.VideoFileWriter(filePath, ...
+    'FrameRate',videoReader.FrameRate);
     W = videoReader.Width; % Width in pixels
     H = videoReader.Height; % Height in pixels
     sz = [W, H];
   
-    SearchRegion = pos.template_orig - pos.search_border - 1;
-    Offset = [0 0];
-    Target = rgb2gray(im2double(sub_im));
-    firstTime = true;
+    searchRegion = pos.template_orig - pos.search_border - 1;
+    offset = [0 0];
+    distances = [];
 
+    
+    % used for moving average filter over previous motionvectors for the
+    % motion model
+    prevMotionVectors = [];
+    Idx = int32(pos.template_center_pos);
+    window = 7;    % window size for Moving Average Filter
 
     while hasFrame(videoReader)
-        input = rgb2gray(im2double(readFrame(videoReader)));
-        pos.template_orig
-        % Find location of Target in the input video frame
-        if firstTime
-          Idx = int32(pos.template_center_pos);
-          MotionVector = [0 0];
-          firstTime = false;
-        else
-          IdxPrev = Idx;
+        input = readFrame(videoReader);
+        input = rgb2gray(im2double(input));
+        
+        % Update previous location 
+        IdxPrev = Idx;
+        
+        % Create ROI using searchregion and border size from pos struct
+        ROI = [searchRegion, pos.template_size+2*pos.search_border];
+        
+        % Find location of best match and metrics around this point. A low 
+        % metric means better fitness for that position
+        [Idx, metrics] = matcher(input,template,ROI);
 
-          ROI = [SearchRegion, pos.template_size+2*pos.search_border];
-          %Idx = matcher(input,Target);
-          [Idx, metrics] = matcher(input,Target,ROI);
-          ychange = abs(Idx(1) - IdxPrev(1));
-          xchange = abs(Idx(2) - IdxPrev(2))
-          motion_model = [0, 0.8];
-         
-          if metrics(2,2) > 0.2 || ychange > 1 || xchange > 1
-              Idx = int32([IdxPrev(1)+motion_model(1), IdxPrev(2) + motion_model(2)]);
-              detected = false;
-              txt = sprintf('There was no match');
-          else 
-              detected = true;
-              txt = sprintf('There was a match');
-
-          end
-          
-          if norm(double(Idx) - double(IdxPrev)) < 5
-              norm(double(Idx) - double(IdxPrev))
-          end
-          
-          metrics(2,2)
-          MotionVector = double(Idx-IdxPrev);
+        ychange = abs(Idx(2) - IdxPrev(2));
+        xchange = abs(Idx(1) - IdxPrev(1));
+           
+        % The metric at the best location is thresholded, so that when the
+        % buoy is not visible due to the waves, the matching algorithm does
+        % not match a different object. Y change is also bounded since we 
+        % know the change in y must be small once we have found the buoy.
+        if metrics(2,2) > 0.2 || ychange > 1 %|| xchange > 4
+            % no match found, use model
+            Idx = IdxPrev + int32(motionModel);
+            detected = false;
+        else 
+            % match found, use position of template matcher
+            detected = true;
+            motion_vector = double(Idx-IdxPrev);
+            
+            % save velocities for motion model moving average filter
+            vels = [prevMotionVectors motion_vector(1)];
+            
+            % adjust motion model to be the current change in pixels with
+            % window size 7
+            motionModel(1) = mean(vels(length(vels) - window : length(vels)));
         end
+        motionVector = double(Idx-IdxPrev);
+        prevMotionVectors = [prevMotionVectors motionVector(1)];
         
-        [Offset, SearchRegion] = updatesearch(sz, MotionVector, ...
-            SearchRegion, Offset, pos);
+        if detected
+            c = 'green';
+            txt = sprintf('There was a match');
+        else
+            c = 'red';
+            txt = sprintf('There was no match');
 
+        end
+        [offset, searchRegion] = updateSearch(sz, motionVector, searchRegion, offset, pos);
 
-        TargetRect = [pos.template_orig-Offset, pos.template_size];
-        SearchRegionRect = [SearchRegion, pos.template_size + 2*pos.search_border];
+        TargetRect = [pos.template_orig-offset, pos.template_size];
+        SearchRegionRect = [searchRegion, pos.template_size + 2*pos.search_border];
 
+           
         % Draw rectangles on input to show target and search region
-        input = insertShape(input, 'Rectangle', [TargetRect; SearchRegionRect],...
-                            'Color', 'white');
+        input = insertShape(input, 'Rectangle', [TargetRect; SearchRegionRect], 'Color', c);
         % Display the offset (displacement) values on the input image
-        txt = sprintf('(%+05.1f,%+05.1f)', Offset);
-    
-        % Draw rectangles on input to show target and search region
-        input = insertShape(input, 'Rectangle', [TargetRect; SearchRegionRect],...
-                            'Color', c);
-        % Display the offset (displacement) values on the input image
-        input = insertText(input(:,:,1),[191 215],txt,'FontSize',16, ...
-                        'TextColor', c, 'BoxOpacity', 0);            
+        input = insertText(input(:,:,1),[191 215],txt,'FontSize',16, 'TextColor', c, 'BoxOpacity', 0);            
         % Display video
-        vid_player([input(:,:,1)]);
+        vidPlayer(input);
         % save frame
-        step(videoFWriter, input); % saves video
-        stabilized = input;
         
+        %videoFWriter(input);
+        step(videoFWriter, input); % saves video
+        distances = [distances, calc_distance(Idx, principalPoint, focalLength)];
+
 
     end
     release(videoFWriter); % close the videoWriter
@@ -104,7 +122,7 @@ end % function stabilize_video
 
 
 % Helper function from Matlab to update Search Region for SAD and Offset for Translate
-function [Offset, SearchRegion] = updatesearch(sz, MotionVector, SearchRegion, Offset, pos)
+function [Offset, SearchRegion] = updateSearch(sz, MotionVector, SearchRegion, Offset, pos)
 
   % check bounds
   A_i = Offset - MotionVector;
