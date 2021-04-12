@@ -1,16 +1,13 @@
-% TRACK_TEMPLATE tracks a template in a video sequence, estimating
-% distances based on camera parameters. Writes tracked video to file 
+% STABILIZE_VIDEO stabilizes a video, removing shakiness/motion from holding the
+% camera from the video. Uses template matching on a stationary point in
+% the background to determine translation between frames. The translation
+% is used to map consecutive images to each other, stabilizing the image
 %
-% [distance] = TRACK_TEMPLATE(videoReader, template, motionModel, principalPoint, focalLength);
+% [distance] = STABILIZE_VIDEO(videoReader, filePath);
 %
 % @param videoReader: video reader object containing video to be stabilized
-% 
-%
 % @param filePath: location to save the stabilized video
 %
-% @returns distances: list, contains distances between camera and matched
-% template at each frame
-% 
 % code adapted from and inspired by https://nl.mathworks.com/help/vision/ref/vision.templatematcher-system-object.html
 
 function [] = stabilize_video(videoReader, filePath) % Input video file which needs to be stabilized.

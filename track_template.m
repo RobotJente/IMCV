@@ -1,20 +1,19 @@
 % TRACK_TEMPLATE tracks a template in a video sequence, estimating
 % distances based on camera parameters. Writes tracked video to file 
 %
-% [distance] = TRACK_TEMPLATE(videoReader, template, motionModel, principalPoint, focalLength);
+% [distance] = TRACK_TEMPLATE(videoReader, filePath, template, motionModel, principalPoint, focalLength, pos);
 %
 % @param videoReader: video reader object containing video to be inspected
-% for template
-% 
+% for template 
+% @param filePath: path to save the tracked video to
 % @param template: image template to be matched in video frames
-%
 % @param motionModel: initial estimate of the motion of the tracked object\
-%
 % @param principalPoint: camera parameter used to estimate distance to
 % template, obtained from camera calibration
-%
 % @param focalLength: camera parameter used to estimate distance to
 % template, obtained from camera calibration
+% @param pos: utility struct containing the initial position, search width,
+% and border size for creating the ROI
 %
 % @returns distances: list, contains distances between camera and matched
 % template at each frame
@@ -89,7 +88,7 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
             % adjust motion model to be the current change in pixels with
             % window size 7
             filterRange = max(1,length(xVels) - window) : length(xVels);
-            motionModel(1) = mean(filterRange);
+            motionModel(1) = mean(xVels(filterRange));
             
             % No motion model in y direction since any motion in that
             % direction is pure noise, since the stabilized video can only
@@ -125,7 +124,9 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
         
         %videoFWriter(input);
         step(videoFWriter, input); % saves video
-        distances = [distances, calc_distance(Idx, principalPoint, focalLength)];
+        h = 2.5;
+        dHorIm = 500;       
+        distances = [distances, calc_distance(Idx, principalPoint, focalLength, dHorIm, h)];
 
 
     end

@@ -17,7 +17,7 @@ videoReader = VideoReader('images/MAH01462.MP4');
 
 % write video file to images/stab_final.avi
 stabVidPath = 'images/stab_final2.avi';
-stabilize_video(videoReader, stabVidPath);
+%stabilize_video(videoReader, stabVidPath);
 
 %% Template Tracking
 
