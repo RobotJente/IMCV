@@ -42,8 +42,11 @@ motionModel = [1, 0]; % [x, y]
 % for determining the initial ROI and the width and height of the search
 % box. 
 pos.template_orig = [650 527]; % [x y] upper left corner, found by manual pinpointing of the buoy
+% pos.template_size = [10 10];   % [width height]
+% pos.search_border = [15 10];   % max horizontal and vertical displacement
 pos.template_size = [10 10];   % [width height]
 pos.search_border = [15 10];   % max horizontal and vertical displacement
+
 pos.template_center = floor((pos.template_size-1)/2);
 pos.template_center_pos = (pos.template_orig + pos.template_center - 1);
 

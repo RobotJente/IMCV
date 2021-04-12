@@ -40,14 +40,17 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
     searchRegion = pos.template_orig - pos.search_border - 1;
     offset = [0 0];
     distances = [];
-
+    
+    
+    h = 2.5;        % height above sea level
+    dHorIm = 500;   % pixel distance to horizon from buoy (calculated manually)  
     
     % used for moving average filter over previous motionvectors for the
     % motion model
     prevMotionVectorsX = [];
     prevMotionVectorsY = [];        % current implementation only uses X (see report)
     Idx = int32(pos.template_center_pos);
-    window = 7;                     % window size for Moving Average Filter
+    window = 7;                     % wi  ndow size for Moving Average Filter
 
     while hasFrame(videoReader)
         input = readFrame(videoReader);
@@ -124,8 +127,7 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
         
         %videoFWriter(input);
         step(videoFWriter, input); % saves video
-        h = 2.5;
-        dHorIm = 500;       
+ 
         distances = [distances, calc_distance(Idx, principalPoint, focalLength, dHorIm, h)];
 
 

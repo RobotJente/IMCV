@@ -1,7 +1,7 @@
 % CALC_DISTANCE finds the distance between a matched template and the
 % camera
 %
-% [distance] = CALC_DISTANCE(buoyPixelLocation, principalPoint, focalLength);
+% [distance] = CALC_DISTANCE(buoyPixelLocation, principalPoint, focalLength, focalLength, dHorIm, h);
 %
 % @param buoyPixelLocation: pixel location of the buoy in the frame (found
 % by template matching)
