@@ -28,9 +28,7 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
     matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true, 'Metric', 'Sum of squared differences');
     
     % Write video to file
-    %videoFWriter = vision.VideoFileWriter(filePath, 'FrameRate',videoReader.FrameRate);
-    videoFWriter = vision.VideoFileWriter(filePath, ...
-    'FrameRate',videoReader.FrameRate);
+    videoFWriter = vision.VideoFileWriter(filePath, 'FrameRate',videoReader.FrameRate);
     W = videoReader.Width; % Width in pixels
     H = videoReader.Height; % Height in pixels
     sz = [W, H];
@@ -42,9 +40,10 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
     
     % used for moving average filter over previous motionvectors for the
     % motion model
-    prevMotionVectors = [];
+    prevMotionVectorsX = [];
+    prevMotionVectorsY = [];        % current implementation only uses X (see report)
     Idx = int32(pos.template_center_pos);
-    window = 7;    % window size for Moving Average Filter
+    window = 7;                     % window size for Moving Average Filter
 
     while hasFrame(videoReader)
         input = readFrame(videoReader);
@@ -69,23 +68,33 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
         % know the change in y must be small once we have found the buoy.
         if metrics(2,2) > 0.2 || ychange > 1 %|| xchange > 4
             % no match found, use model
-            Idx = IdxPrev + int32(motionModel);
             detected = false;
+            Idx = IdxPrev + int32(motionModel);
+            motionVector = double(Idx-IdxPrev);
+
         else 
             % match found, use position of template matcher
             detected = true;
-            motion_vector = double(Idx-IdxPrev);
+            motionVector = double(Idx-IdxPrev);
             
             % save velocities for motion model moving average filter
-            vels = [prevMotionVectors motion_vector(1)];
+            xVels = [prevMotionVectorsX motionVector(1)];
+            %yVels = [prevMotionVectorsY motionVector(2)];
             
             % adjust motion model to be the current change in pixels with
             % window size 7
-            motionModel(1) = mean(vels(length(vels) - window : length(vels)));
+            motionModel(1) = mean(xVels(length(xVels) - window : length(xVels)));
+            
+            % No motion model in y direction since any motion in that
+            % direction is pure noise, since the stabilized video can only
+            % have x direction motion
+            
+            % motionModel(2) = mean(yVels(length(yVels) - window : length(yVels)));
+
         end
-        motionVector = double(Idx-IdxPrev);
-        prevMotionVectors = [prevMotionVectors motionVector(1)];
-        
+        prevMotionVectorsX = [prevMotionVectorsX motionVector(1)];
+        prevMotionVectorsY = [prevMotionVectorsY motionVector(1)];
+
         if detected
             c = 'green';
             txt = sprintf('There was a match');

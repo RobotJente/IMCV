@@ -1,17 +1,26 @@
 % vid parameter must be a VideoReader object. Stabilizes the image based on
 % translation of manually selected area between frames, by template tracking
 
-function [stabilized] = stabilize_video(videoReader) % Input video file which needs to be stabilized.
+function [stabilized] = stabilize_video(videoReader, filePath) % Input video file which needs to be stabilized.
     % instantiate video reader, player, and template matcher
     vid_player = vision.VideoPlayer('Name', 'Video Stabilization');
     matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true);
-    videoFWriter = vision.VideoFileWriter('images/stab_1.avi', 'FrameRate',videoReader.FrameRate);
+    videoFWriter = vision.VideoFileWriter(filePath, 'FrameRate',videoReader.FrameRate);
 
-    % read first frame and use it to select the template to be matched
+    % read first frame and use it to select the template to be matched by
+    % manual cropping
     im = readFrame(videoReader);
     [sub_im, rectout] = imcrop(im);
+    data = {sub_im, rectout};
+    save stabilization_template data
 
-    % initialize pos, utility struct for template matching
+    % alternatively, you can use the saved template we used to reproduce
+    % our results exactly
+%     s = load('stab_template');
+%     sub_im = s.data{1,1};
+%     sub_im = rgb2gray(im2double(sub_im));
+%     rectout = s.data{1,2};
+    % initialize pos, utility struct for the initial position of the template
     pos.template_orig = [rectout(1) rectout(2)]; % [x y] upper left corner
     pos.template_size = [30 30];   % [width height]
     pos.search_border = [15 10];   % max horizontal and vertical displacement
@@ -26,13 +35,15 @@ function [stabilized] = stabilize_video(videoReader) % Input video file which ne
     
     SearchRegion = pos.template_orig - pos.search_border - 1;
     Offset = [0 0];
-    Target = rgb2gray(im2double(sub_im));
+    
+    % template to track
+    Target = im2gray(im2double(sub_im));
     firstTime = true;
 
 
 
     while hasFrame(videoReader)
-        input = rgb2gray(im2double(readFrame(videoReader)));
+        input = im2gray(im2double(readFrame(videoReader)));
 
         % Find location of Target in the input video frame
         if firstTime
@@ -64,10 +75,7 @@ function [stabilized] = stabilize_video(videoReader) % Input video file which ne
         % Draw rectangles on input to show target and search region
         input = insertShape(input, 'Rectangle', [TargetRect; SearchRegionRect],...
                             'Color', 'white');
-        % Display the offset (displacement) values on the input image
-        txt = sprintf('(%+05.1f,%+05.1f)', Offset);
-        input = insertText(input(:,:,1),[191 215],txt,'FontSize',16, ...
-                        'TextColor', 'white', 'BoxOpacity', 0);
+
         % Display video
         vid_player([input(:,:,1) stabilized]);
         % save frame
