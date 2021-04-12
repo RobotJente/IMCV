@@ -1,7 +1,19 @@
-% vid parameter must be a VideoReader object. Stabilizes the image based on
-% translation of manually selected area between frames, by template tracking
+% TRACK_TEMPLATE tracks a template in a video sequence, estimating
+% distances based on camera parameters. Writes tracked video to file 
+%
+% [distance] = TRACK_TEMPLATE(videoReader, template, motionModel, principalPoint, focalLength);
+%
+% @param videoReader: video reader object containing video to be stabilized
+% 
+%
+% @param filePath: location to save the stabilized video
+%
+% @returns distances: list, contains distances between camera and matched
+% template at each frame
+% 
+% code adapted from and inspired by https://nl.mathworks.com/help/vision/ref/vision.templatematcher-system-object.html
 
-function [stabilized] = stabilize_video(videoReader, filePath) % Input video file which needs to be stabilized.
+function [] = stabilize_video(videoReader, filePath) % Input video file which needs to be stabilized.
     % instantiate video reader, player, and template matcher
     vid_player = vision.VideoPlayer('Name', 'Video Stabilization');
     matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true);
@@ -9,17 +21,17 @@ function [stabilized] = stabilize_video(videoReader, filePath) % Input video fil
 
     % read first frame and use it to select the template to be matched by
     % manual cropping
-    im = readFrame(videoReader);
-    [sub_im, rectout] = imcrop(im);
-    data = {sub_im, rectout};
-    save stabilization_template data
+%     im = readFrame(videoReader);
+%     [sub_im, rectout] = imcrop(im);
+%     data = {sub_im, rectout};
+%     save stabilization_template data
 
     % alternatively, you can use the saved template we used to reproduce
     % our results exactly
-%     s = load('stab_template');
-%     sub_im = s.data{1,1};
-%     sub_im = rgb2gray(im2double(sub_im));
-%     rectout = s.data{1,2};
+    s = load('data/stabilization_template');
+    sub_im = s.data{1,1};
+    sub_im = rgb2gray(im2double(sub_im));
+    rectout = s.data{1,2};
     % initialize pos, utility struct for the initial position of the template
     pos.template_orig = [rectout(1) rectout(2)]; % [x y] upper left corner
     pos.template_size = [30 30];   % [width height]

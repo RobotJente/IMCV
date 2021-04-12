@@ -16,20 +16,20 @@ clear; close all; clc;
 videoReader = VideoReader('images/MAH01462.MP4');
 
 % write video file to images/stab_final.avi
-stabVidPath = 'images/stab_final.avi';
+stabVidPath = 'images/stab_final2.avi';
 stabilize_video(videoReader, stabVidPath);
 
 %% Template Tracking
 
 % access camera parameters used to determine distance to the buoy
-c = load('cameraParams');
+c = load('data/cameraParams');
 principalPoint = c.cameraParams.PrincipalPoint;
 focalLength = c.cameraParams.FocalLength;
 
 % finally, open video reader to track the template 
 videoReader = VideoReader(stabVidPath);
 
-s = load('template_data');
+s = load('data/template_data');
 template = s.data{1,1};
 template = rgb2gray(im2double(template));
 
@@ -48,7 +48,7 @@ pos.template_center = floor((pos.template_size-1)/2);
 pos.template_center_pos = (pos.template_orig + pos.template_center - 1);
 
 % select file to write video output to
-filePath = "images/tracked_buoy.avi";
+filePath = "images/tracked_buoy2.avi";
 
 % Track the given template in the video, given the motion model, and return
 % the distances

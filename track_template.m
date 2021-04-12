@@ -25,7 +25,12 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
 
     % instantiate video reader, player, and template matcher
     vidPlayer = vision.VideoPlayer('Name', 'Video Tracking');
-    matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true, 'Metric', 'Sum of squared differences');
+    
+    % if more computational speed is desired, the setting 3-step can
+    % be used. This setting defaults to exhaustive, but the 3-step search 
+    % criterion sacrifices accuracy of match for computational efficiency
+    % usage:  'SearchMethod', 'Three-step'
+    matcher = vision.TemplateMatcher('ROIInputPort', true, 'BestMatchNeighborhoodOutputPort', true, 'Metric', 'Sum of squared differences', 'SearchMethod', 'Exhaustive');
     
     % Write video to file
     videoFWriter = vision.VideoFileWriter(filePath, 'FrameRate',videoReader.FrameRate);
@@ -83,7 +88,8 @@ function [distances] = track_template(videoReader, filePath, template, motionMod
             
             % adjust motion model to be the current change in pixels with
             % window size 7
-            motionModel(1) = mean(xVels(length(xVels) - window : length(xVels)));
+            filterRange = max(1,length(xVels) - window) : length(xVels);
+            motionModel(1) = mean(filterRange);
             
             % No motion model in y direction since any motion in that
             % direction is pure noise, since the stabilized video can only
